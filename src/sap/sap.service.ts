@@ -2,6 +2,10 @@ import { Injectable, Logger } from '@nestjs/common';
 import { SapRfcClientService } from './sap-rfc-client.service';
 import { CustomerStatus, SapCustomerResponseDto } from './dto/sap-customer-response.dto';
 import { SapCardResponseDto } from './dto/sap-card-response.dto';
+import {
+  SapMonthlyConsumptionItemDto,
+  SapMonthlyConsumptionReportDto,
+} from './dto/sap-monthly-consumption-report.dto';
 import { SapTransactionResponseDto } from './dto/sap-transaction-response.dto';
 import { SapStatementResponseDto } from './dto/sap-statement-response.dto';
 
@@ -34,6 +38,26 @@ export class SapService {
     });
 
     return this.mapCard(result);
+  }
+
+  async getMonthlyConsumptionReport(filters: {
+    customerId?: string;
+    cardId?: string;
+    cutoffDate: string;
+  }): Promise<SapMonthlyConsumptionReportDto> {
+    const result = await this.rfcClient.call('ZDATOS_TARJETA', {
+      CEDULA: filters.customerId || '',
+      NUMTAR: filters.cardId || '',
+      FECHA: this.formatSapDate(filters.cutoffDate),
+    });
+
+    return {
+      header: this.mapMonthlyConsumptionHeader(result),
+      consumptions: this.normalizeSapTable(result?.CONSUMOS)
+        // SAP may return preallocated blank rows; keep only meaningful detail lines.
+        .filter((item: any) => this.hasMonthlyConsumptionContent(item))
+        .map((item: any) => this.mapMonthlyConsumptionItem(item)),
+    };
   }
 
   async getCardTransactions(
@@ -170,7 +194,47 @@ export class SapService {
 
       message: clean(raw.MENSAJE),
     };
-}
+  }
+
+  private mapMonthlyConsumptionHeader(raw: any) {
+    const clean = (val: any) => (val || '').toString().trim();
+
+    return {
+      customerCode: clean(raw.COD_CLIENTE),
+      identification: clean(raw.CEDULA || raw.IDENTIFICACION),
+      customerName: clean(raw.CLIENTE),
+      cardNumber: clean(raw.NUMTR),
+      cvv: clean(raw.CVV),
+      expirationDate: this.parseDateValue(clean(raw.FECHA_CADUCIDAD)),
+      status: clean(raw.ESTD_TR),
+      overdueBalance: this.parseAmount(raw.SALDO_VENCIDO),
+      amountDue: this.parseAmount(raw.SALDO_PAGAR),
+      paymentDueDate: this.parseDateValue(clean(raw.FECHA_PAGAR)),
+      creditLimit: this.parseAmount(raw.CUPO),
+      message: clean(raw.MENSAJE),
+      availableCredit: this.parseAmount(raw.SALDO),
+      usedCredit: this.parseAmount(raw.UTILIZADO),
+      issueDate: this.parseDateValue(clean(raw.FECHA_EMISION)),
+      points: this.parseAmount(raw.PUNTOS),
+    };
+  }
+
+  private mapMonthlyConsumptionItem(raw: any): SapMonthlyConsumptionItemDto {
+    const description = (raw.SGTXT || '').trim();
+    const isBalanceLine = description.includes('*** SALDO');
+
+    return {
+      date: isBalanceLine ? null : this.parseDateValue((raw.BLDAT || '').trim()),
+      reference: isBalanceLine ? null : (raw.XBLNR || '').trim() || null,
+      description,
+      amount: this.parseAmount(raw.DMBTR),
+      deferredBalance: this.parseAmount(raw.SALTR),
+    };
+  }
+
+  private hasMonthlyConsumptionContent(raw: any): boolean {
+    return Boolean((raw?.SGTXT || '').toString().trim());
+  }
 
   private mapCard(raw: any): SapCardResponseDto {
     if (!raw) return null;
@@ -228,5 +292,40 @@ export class SapService {
       currency: (raw.CURRENCY || 'USD').trim(),
       status: (raw.STATUS || '').trim(),
     };
+  }
+
+  private normalizeSapTable(raw: any): any[] {
+    if (!raw) return [];
+    if (Array.isArray(raw)) return raw;
+    if (Array.isArray(raw.item)) return raw.item;
+    if (raw.item) return [raw.item];
+    return [];
+  }
+
+  private parseAmount(raw: any): number {
+    const value = Number.parseFloat((raw || '0').toString().replace(/,/g, ''));
+    return Number.isNaN(value) ? 0 : value;
+  }
+
+  private parseDateValue(raw: string): string | null {
+    if (!raw || raw === '00000000') return null;
+
+    if (/^\d{8}$/.test(raw)) {
+      return `${raw.substring(0, 4)}-${raw.substring(4, 6)}-${raw.substring(6, 8)}`;
+    }
+
+    if (/^\d{2}\.\d{2}\.\d{4}$/.test(raw)) {
+      const [day, month, year] = raw.split('.');
+      return `${year}-${month}-${day}`;
+    }
+
+    if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
+
+    return raw;
+  }
+
+  private formatSapDate(date: string): string {
+    const [year, month, day] = date.split('-');
+    return `${day}.${month}.${year}`;
   }
 }

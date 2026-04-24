@@ -1,5 +1,7 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { SapService } from '../sap/sap.service';
+import { GenerateMonthlyConsumptionDto } from './dto/generate-monthly-consumption.dto';
+import { MonthlyConsumptionResponseDto } from './dto/monthly-consumption-response.dto';
 import { StatementsQueryDto } from './dto/statements-query.dto';
 import { StatementResponseDto } from './dto/statement-response.dto';
 import { PaginatedResponseDto } from '../common/dto/pagination.dto';
@@ -25,6 +27,50 @@ export class StatementsService {
 
     const mapped = statements.map((s) => this.mapToDto(s));
     return new PaginatedResponseDto(mapped, total, page, limit);
+  }
+
+  async getMonthlyConsumption(
+    request: GenerateMonthlyConsumptionDto,
+  ): Promise<MonthlyConsumptionResponseDto> {
+    const hasCustomerId = Boolean(request.customerId);
+    const hasCardId = Boolean(request.cardId);
+
+    if (hasCustomerId === hasCardId) {
+      throw new BadRequestException('Send exactly one of customerId or cardId');
+    }
+
+    const cutoffDate = new Date(`${request.cutoffDate}T00:00:00`);
+    if (
+      Number.isNaN(cutoffDate.getTime()) ||
+      cutoffDate.getUTCFullYear() !== request.year ||
+      cutoffDate.getUTCMonth() + 1 !== request.month
+    ) {
+      throw new BadRequestException('cutoffDate must belong to the requested year and month');
+    }
+
+    this.logger.debug(`Fetching monthly consumption report from SAP: ${JSON.stringify(request)}`);
+
+    const report = await this.sapService.getMonthlyConsumptionReport({
+      customerId: request.customerId,
+      cardId: request.cardId,
+      cutoffDate: request.cutoffDate,
+    });
+
+    if (
+      !report.header?.customerCode &&
+      !report.header?.cardNumber &&
+      !report.header?.identification
+    ) {
+      throw new NotFoundException('Monthly consumption report not found in SAP');
+    }
+
+    return {
+      year: request.year,
+      month: request.month,
+      cutoffDate: request.cutoffDate,
+      header: report.header,
+      consumptions: report.consumptions,
+    };
   }
 
   private mapToDto(s: any): StatementResponseDto {
