@@ -21,16 +21,37 @@ async function bootstrap() {
   const port = configService.get<number>('app.port', 3000);
   const apiPrefix = configService.get<string>('app.apiPrefix', 'api/v1');
   const corsOrigins = configService.get<string>('app.corsOrigins', '*');
+  const parsedCorsOrigins = corsOrigins
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+  const allowAllOrigins = parsedCorsOrigins.includes('*');
 
   app.use(helmet());
   app.use(compression());
   app.use(cookieParser());
 
+  app.use((req, res, next) => {
+    if (req.headers['access-control-request-private-network'] === 'true') {
+      res.header('Access-Control-Allow-Private-Network', 'true');
+    }
+
+    next();
+  });
+
   app.enableCors({
-    origin: corsOrigins.split(','),
+    origin: (origin, callback) => {
+      if (!origin || allowAllOrigins || parsedCorsOrigins.includes(origin)) {
+        callback(null, true);
+        return;
+      }
+
+      callback(new Error(`CORS blocked origin: ${origin}`), false);
+    },
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
     credentials: true,
+    optionsSuccessStatus: 204,
   });
 
   app.setGlobalPrefix(apiPrefix);
@@ -59,6 +80,14 @@ async function bootstrap() {
     .addBearerAuth(
       { type: 'http', scheme: 'bearer', bearerFormat: 'JWT', in: 'header' },
       'access-token',
+    )
+    .addApiKey(
+      { type: 'apiKey', in: 'header', name: 'x-api-key' },
+      'x-api-key',
+    )
+    .addApiKey(
+      { type: 'apiKey', in: 'header', name: 'x-api-token' },
+      'x-api-token',
     )
     .addTag('auth', 'Authentication endpoints')
     .addTag('customers', 'Customer management')

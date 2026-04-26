@@ -6,6 +6,7 @@ import { WinstonModule } from 'nest-winston';
 import appConfig from './config/app.config';
 import jwtConfig from './config/jwt.config';
 import sapConfig from './config/sap.config';
+import apiAuthConfig from './config/api-auth.config';
 import { winstonConfig } from './config/winston.config';
 import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './auth/auth.module';
@@ -20,7 +21,7 @@ import { StatementsModule } from './statements/statements.module';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      load: [appConfig, jwtConfig, sapConfig],
+      load: [appConfig, jwtConfig, sapConfig, apiAuthConfig],
       envFilePath: ['.env'],
     }),
     WinstonModule.forRoot(winstonConfig),

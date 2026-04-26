@@ -18,3 +18,17 @@ If you want to learn more about creating good readme files then refer the follow
 - [ASP.NET Core](https://github.com/aspnet/Home)
 - [Visual Studio Code](https://github.com/Microsoft/vscode)
 - [Chakra Core](https://github.com/Microsoft/ChakraCore)
+
+
+Ejecutar seed 
+
+Cómo ejecutarlo con tu usuario unitystores
+Opción 1: generando key/token automáticamente
+SEED_API_CREDENTIAL_USER=unitystores npm run prisma:seed:api-credential
+
+Opción 2: definiendo tus propios valores
+SEED_API_CREDENTIAL_USER=unitystores SEED_API_CREDENTIAL_NAME=VTEX SEED_API_CREDENTIAL_KEY=mi_key_segura SEED_API_CREDENTIAL_TOKEN=mi_token_seguro npm run prisma:seed:api-credential
+
+Opción 3: con expiración
+SEED_API_CREDENTIAL_USER=unitystores SEED_API_CREDENTIAL_NAME=VTEX SEED_API_CREDENTIAL_EXPIRES_AT=2026-12-31T23:59:59Z npm run prisma:seed:api-credential
+
