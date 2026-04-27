@@ -60,12 +60,20 @@ export class SapCustomerResponseDto {
   overdueBalance?: number;
 
   @IsOptional()
+  @IsNumber()
+  points?: number;
+
+  @IsOptional()
   @IsDateString()
   expirationDate?: string;
 
   @IsOptional()
   @IsDateString()
   nextPaymentDate?: string;
+
+  @IsOptional()
+  @IsDateString()
+  issueDate?: string;
 
   @IsOptional()
   @IsString()

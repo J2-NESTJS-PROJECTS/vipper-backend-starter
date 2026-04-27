@@ -51,10 +51,18 @@ export class CustomerResponseDto {
   @IsDateString()
   nextPaymentDate?: string;
 
+  @ApiPropertyOptional({ example: null })
+  @IsOptional()
+  @IsDateString()
+  issueDate?: string;
+
   // tarjeta / transacción
   @ApiPropertyOptional({ example: '' })
   @IsOptional()
   @IsString()
   cardNumber?: string;
 
+  @ApiProperty({ example: 0.0 })
+  @IsNumber()
+  points?: number;
 }

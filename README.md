@@ -30,5 +30,16 @@ Opción 2: definiendo tus propios valores
 SEED_API_CREDENTIAL_USER=unitystores SEED_API_CREDENTIAL_NAME=VTEX SEED_API_CREDENTIAL_KEY=mi_key_segura SEED_API_CREDENTIAL_TOKEN=mi_token_seguro npm run prisma:seed:api-credential
 
 Opción 3: con expiración
-SEED_API_CREDENTIAL_USER=unitystores SEED_API_CREDENTIAL_NAME=VTEX SEED_API_CREDENTIAL_EXPIRES_AT=2026-12-31T23:59:59Z npm run prisma:seed:api-credential
+SEED_API_CREDENTIAL_USER=unitystores SEED_API_CREDENTIAL_NAME=VTEX SEED_API_CREDENTIAL_EXPIRES_AT=2026-12-31T23:59:59Znpm run prisma:seed:api-credential
+
+
+
+npm install    
+npm run prisma:migrate:prod
+npm run prisma:generate    
+npm run build     
+sudo scp -r prisma administrador@172.16.0.22:/var/www/BackendOfficial/
+sudo scp -r dist administrador@172.16.0.22:/var/www/BackendOfficial/
+
+
 

@@ -18,14 +18,6 @@ export class GenerateMonthlyConsumptionDto {
   @IsString()
   customerId?: string;
 
-  @ApiPropertyOptional({
-    example: '8355100049400010',
-    description: 'Card number. Send exactly one of customerId or cardId.',
-  })
-  @IsOptional()
-  @IsString()
-  cardId?: string;
-
   @ApiProperty({ example: 2026 })
   @Type(() => Number)
   @IsInt()
@@ -40,10 +32,4 @@ export class GenerateMonthlyConsumptionDto {
   @Max(12)
   month: number;
 
-  @ApiProperty({
-    example: '2026-04-23',
-    description: 'Cutoff date used by SAP FECHA. Must belong to the requested month.',
-  })
-  @IsDateString()
-  cutoffDate: string;
 }

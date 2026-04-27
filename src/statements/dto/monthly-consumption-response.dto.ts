@@ -74,9 +74,6 @@ export class MonthlyConsumptionResponseDto {
   @ApiProperty({ example: 4 })
   month: number;
 
-  @ApiProperty({ example: '2026-04-23' })
-  cutoffDate: string;
-
   @ApiProperty({ type: MonthlyConsumptionHeaderDto })
   header: MonthlyConsumptionHeaderDto;
 

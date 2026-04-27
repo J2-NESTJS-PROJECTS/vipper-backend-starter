@@ -42,21 +42,59 @@ export class SapService {
 
   async getMonthlyConsumptionReport(filters: {
     customerId?: string;
-    cardId?: string;
     cutoffDate: string;
   }): Promise<SapMonthlyConsumptionReportDto> {
-    const result = await this.rfcClient.call('ZDATOS_TARJETA', {
-      CEDULA: filters.customerId || '',
-      NUMTAR: filters.cardId || '',
-      FECHA: this.formatSapDate(filters.cutoffDate),
+    const result = await this.rfcClient.call('ZDI_ESTADO_CUENTA', {
+      P_BUKRS: '1010',
+      STCD1: filters.customerId || '',
+      P_ZTPNR: '02',
+      P_ZORNR: filters.cutoffDate,
+      CABECERA: [],
+      DETALLE: [],
     });
 
+    const headerItem = this.normalizeSapTable(result?.CABECERA)[0] || {};
+    const identification = ((result?.STCD1 || filters.customerId || '') as string).trim();
+
     return {
-      header: this.mapMonthlyConsumptionHeader(result),
-      consumptions: this.normalizeSapTable(result?.CONSUMOS)
+      header: this.mapMonthlyConsumptionHeader(headerItem, identification),
+      consumptions: this.normalizeSapTable(result?.DETALLE)
         // SAP may return preallocated blank rows; keep only meaningful detail lines.
         .filter((item: any) => this.hasMonthlyConsumptionContent(item))
         .map((item: any) => this.mapMonthlyConsumptionItem(item)),
+    };
+  }
+
+  async getAccountStatement(filters: {
+    customerId: string;
+    cutoffDate: string;
+  }): Promise<{
+    companyCode: string;
+    period: string;
+    identification: string;
+    header: any | null;
+    details: any[];
+  }> {
+    const result = await this.rfcClient.call('ZDI_ESTADO_CUENTA', {
+      P_BUKRS: '1010',
+      STCD1: filters.customerId || '',
+      P_ZTPNR: '02',
+      P_ZORNR: filters.cutoffDate,
+      CABECERA: [],
+      DETALLE: [],
+    });
+
+    const header = this.normalizeSapTable(result?.CABECERA)[0] || null;
+    const details = this.normalizeSapTable(result?.DETALLE).filter((item: any) =>
+      this.hasMonthlyConsumptionContent(item),
+    );
+
+    return {
+      companyCode: ((result?.P_BUKRS || '1010') as string).trim(),
+      period: ((result?.P_ZORNR || filters.cutoffDate || '') as string).trim(),
+      identification: ((result?.STCD1 || filters.customerId || '') as string).trim(),
+      header,
+      details,
     };
   }
 
@@ -103,24 +141,28 @@ export class SapService {
       cardId?: string;
       dateFrom?: string;
       dateTo?: string;
-      minAmount?: number;
-      maxAmount?: number;
     },
     page = 1,
     limit = 20,
   ): Promise<{ transactions: SapTransactionResponseDto[]; total: number }> {
-    const result = await this.rfcClient.call('ZGET_TRANSACTIONS', {
-      I_KUNNR: filters.customerId ? filters.customerId.padStart(10, '0') : '',
-      I_CARD_ID: filters.cardId || '',
-      I_DATE_FROM: filters.dateFrom || '',
-      I_DATE_TO: filters.dateTo || '',
-      I_AMT_FROM: filters.minAmount || 0,
-      I_AMT_TO: filters.maxAmount || 0,
-      I_PAGE: page,
-      I_ROWS: limit,
+    const sapCardNumber = this.toSapCardNumber(filters.cardId);
+    const sapDate = filters.dateTo ? this.formatSapDate(filters.dateTo) : '01.01.2026';
+
+    this.logger.debug(
+      `Calling ZDATOS_TARJETA for transactions with NUMTAR=${this.maskCardNumber(sapCardNumber)} FECHA=${sapDate}`,
+    );
+
+    const result = await this.rfcClient.call('ZDATOS_TARJETA', {
+      CEDULA: filters.customerId || '',
+      NUMTAR: sapCardNumber,
+      FECHA: sapDate,
+      CONSUMOS: [],
     });
 
-    const transactions = (result.ET_TRANSACTIONS || []).map((t: any) =>
+    const consumos = this.normalizeSapTable(result?.CONSUMOS);
+    this.logger.debug(`ZDATOS_TARJETA returned CONSUMOS rows: ${consumos.length}`);
+
+    const transactions = consumos.map((t: any) =>
       this.mapTransaction(t),
     );
     const total = result.E_TOTAL || transactions.length;
@@ -187,35 +229,49 @@ export class SapService {
       // fechas importantes
       expirationDate: parseDate(raw.FECHA_CADUCIDAD),
       nextPaymentDate: parseDate(raw.FECHA_PAGAR),
+      issueDate: parseDate(raw.FECHA_EMISION),
 
       // tarjeta / transacción
       cardNumber: clean(raw.NUMTR),
       transactionNumber: clean(raw.NUMTAR),
 
+      // puntos
+      points: parseFloat(raw.PUNTOS || '0'),
+
       message: clean(raw.MENSAJE),
     };
   }
 
-  private mapMonthlyConsumptionHeader(raw: any) {
+  private mapMonthlyConsumptionHeader(raw: any, identification: string) {
     const clean = (val: any) => (val || '').toString().trim();
 
+    const overdueBalance = this.parseAmount(raw.VLVEN);
+    const minimumRotative = this.parseAmount(raw.VLROT);
+    const deferredInstallment = this.parseAmount(raw.VLDIF);
+    const monthlyCharges = this.parseAmount(raw.VLCAR);
+    const minimumPayment = overdueBalance + minimumRotative + deferredInstallment + monthlyCharges;
+    const deferredTotal = this.parseAmount(raw.DIFTR);
+    const usedCredit = minimumPayment + deferredTotal;
+    const creditLimit = this.parseAmount(raw.CUPTR);
+    const availableCredit = creditLimit - usedCredit;
+
     return {
-      customerCode: clean(raw.COD_CLIENTE),
-      identification: clean(raw.CEDULA || raw.IDENTIFICACION),
-      customerName: clean(raw.CLIENTE),
+      customerCode: clean(raw.KUNNR),
+      identification,
+      customerName: clean(raw.NOMBR),
       cardNumber: clean(raw.NUMTR),
-      cvv: clean(raw.CVV),
-      expirationDate: this.parseDateValue(clean(raw.FECHA_CADUCIDAD)),
-      status: clean(raw.ESTD_TR),
-      overdueBalance: this.parseAmount(raw.SALDO_VENCIDO),
-      amountDue: this.parseAmount(raw.SALDO_PAGAR),
-      paymentDueDate: this.parseDateValue(clean(raw.FECHA_PAGAR)),
-      creditLimit: this.parseAmount(raw.CUPO),
-      message: clean(raw.MENSAJE),
-      availableCredit: this.parseAmount(raw.SALDO),
-      usedCredit: this.parseAmount(raw.UTILIZADO),
-      issueDate: this.parseDateValue(clean(raw.FECHA_EMISION)),
-      points: this.parseAmount(raw.PUNTOS),
+      cvv: '',
+      expirationDate: null,
+      status: '',
+      overdueBalance,
+      amountDue: minimumPayment,
+      paymentDueDate: this.parseDateValue(clean(raw.FECPA)),
+      creditLimit,
+      message: '',
+      availableCredit,
+      usedCredit,
+      issueDate: null,
+      points: 0,
     };
   }
 
@@ -256,20 +312,34 @@ export class SapService {
 
   private mapTransaction(raw: any): SapTransactionResponseDto {
     if (!raw) return null;
+
+    const docNo = (raw.DOC_NO || raw.TRANS_ID || '').trim();
+    const itemNum = (raw.ITEM_NUM || '').trim();
+    const customerId = (raw.CUSTOMER || raw.KUNNR || '').trim();
+
+    const amount = this.parseAmount(raw.AMOUNT || raw.AMT_DOCCUR || raw.LC_AMOUNT);
+    const signedAmount = (raw.DB_CR_IND || '').trim() === 'H' ? -Math.abs(amount) : amount;
+
+    const clearDate = (raw.CLEAR_DATE || '').trim();
+    const docStatus = (raw.DOC_STATUS || '').trim();
+    const status =
+      docStatus ||
+      (clearDate && clearDate !== '00000000' ? 'CLEARED' : 'OPEN');
+
     return {
-      id: (raw.TRANS_ID || '').trim(),
-      cardId: (raw.CARD_ID || '').trim(),
-      customerId: (raw.KUNNR || '').trim(),
-      date: (raw.TRANS_DATE || '').trim(),
+      id: itemNum ? `${docNo}-${itemNum}` : docNo,
+      cardId: (raw.NUMTR || raw.CARD_ID || '').trim(),
+      customerId,
+      date: this.parseDateValue((raw.PSTNG_DATE || raw.DOC_DATE || raw.ENTRY_DATE || '').trim()),
       time: (raw.TRANS_TIME || '').trim(),
-      description: (raw.DESCRIPTION || '').trim(),
-      merchantName: (raw.MERCHANT || '').trim(),
-      merchantCategory: (raw.MCC || '').trim(),
-      amount: parseFloat(raw.AMOUNT || '0'),
-      currency: (raw.CURRENCY || 'USD').trim(),
-      type: (raw.TRANS_TYPE || '').trim(),
-      status: (raw.STATUS || '').trim(),
-      authCode: (raw.AUTH_CODE || '').trim(),
+      description: (raw.ITEM_TEXT || raw.DESCRIPTION || raw.REF_DOC_NO || raw.ALLOC_NMBR || '').trim(),
+      merchantName: (raw.NAME || raw.NAME_2 || raw.MERCHANT || '').trim(),
+      merchantCategory: (raw.DOC_TYPE || raw.MCC || '').trim(),
+      amount: signedAmount,
+      currency: (raw.CURRENCY || raw.T_CURRENCY || raw.LOC_CURRCY || 'USD').trim(),
+      type: (raw.DOC_TYPE || raw.TRANS_TYPE || raw.POST_KEY || '').trim(),
+      status,
+      authCode: (raw.REF_DOC_NO_LONG || raw.REF_DOC_NO || raw.AUTH_CODE || '').trim(),
       country: (raw.COUNTRY || '').trim(),
     };
   }
@@ -327,5 +397,17 @@ export class SapService {
   private formatSapDate(date: string): string {
     const [year, month, day] = date.split('-');
     return `${day}.${month}.${year}`;
+  }
+
+  private toSapCardNumber(cardId?: string): string {
+    const digits = (cardId || '').replace(/\D/g, '');
+    if (!digits) return '';
+    return digits.padStart(16, '0').slice(-16);
+  }
+
+  private maskCardNumber(cardNumber: string): string {
+    if (!cardNumber) return '<empty>';
+    if (cardNumber.length <= 4) return cardNumber;
+    return `${'*'.repeat(cardNumber.length - 4)}${cardNumber.slice(-4)}`;
   }
 }

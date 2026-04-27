@@ -45,18 +45,4 @@ export class TransactionsQueryDto {
   @IsOptional()
   @IsDateString()
   dateTo?: string;
-
-  @ApiPropertyOptional({ example: 10.00 })
-  @IsOptional()
-  @Type(() => Number)
-  @IsNumber()
-  @Min(0)
-  minAmount?: number;
-
-  @ApiPropertyOptional({ example: 5000.00 })
-  @IsOptional()
-  @Type(() => Number)
-  @IsNumber()
-  @Min(0)
-  maxAmount?: number;
 }

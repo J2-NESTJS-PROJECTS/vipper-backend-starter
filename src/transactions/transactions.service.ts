@@ -13,12 +13,12 @@ export class TransactionsService {
   async findAll(
     query: TransactionsQueryDto,
   ): Promise<PaginatedResponseDto<TransactionResponseDto>> {
-    const { page = 1, limit = 20, customerId, cardId, dateFrom, dateTo, minAmount, maxAmount } = query;
+    const { page = 1, limit = 20, customerId, cardId, dateFrom, dateTo } = query;
 
     this.logger.debug(`Fetching transactions from SAP with filters: ${JSON.stringify(query)}`);
 
     const { transactions, total } = await this.sapService.getTransactions(
-      { customerId, cardId, dateFrom, dateTo, minAmount, maxAmount },
+      { customerId, cardId, dateFrom, dateTo },
       page,
       limit,
     );

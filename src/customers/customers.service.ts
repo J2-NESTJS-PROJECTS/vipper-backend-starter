@@ -54,7 +54,9 @@ export class CustomersService {
       overdueBalance: sapData.overdueBalance,
       expirationDate: sapData.expirationDate,
       nextPaymentDate: sapData.nextPaymentDate,
+      issueDate: sapData.issueDate,
       cardNumber: sapData.cardNumber,
+      points: sapData.points,
     };
   }
 }

@@ -28,14 +28,14 @@ export class CustomersController {
     return this.customersService.findById(id);
   }
 
-  @Get(':id/cards')
-  @Permissions({ action: 'read', resource: 'cards' })
-  @ApiOperation({ summary: 'Get all cards for a customer from SAP' })
-  @ApiParam({ name: 'id', description: 'SAP Customer ID (KUNNR)' })
-  @ApiResponse({ status: 200, description: 'List of cards', type: [CardResponseDto] })
-  @ApiResponse({ status: 404, description: 'Customer not found' })
-  @ApiResponse({ status: 502, description: 'SAP RFC error' })
-  findCustomerCards(@Param('id') id: string): Promise<CardResponseDto[]> {
-    return this.customersService.findCustomerCards(id);
-  }
+  // @Get(':id/cards')
+  // @Permissions({ action: 'read', resource: 'cards' })
+  // @ApiOperation({ summary: 'Get all cards for a customer from SAP' })
+  // @ApiParam({ name: 'id', description: 'SAP Customer ID (KUNNR)' })
+  // @ApiResponse({ status: 200, description: 'List of cards', type: [CardResponseDto] })
+  // @ApiResponse({ status: 404, description: 'Customer not found' })
+  // @ApiResponse({ status: 502, description: 'SAP RFC error' })
+  // findCustomerCards(@Param('id') id: string): Promise<CardResponseDto[]> {
+  //   return this.customersService.findCustomerCards(id);
+  // }
 }

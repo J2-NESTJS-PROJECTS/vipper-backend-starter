@@ -1,13 +1,14 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Post, Query, Res } from '@nestjs/common';
+import { Response } from 'express';
 import {
   ApiBody,
   ApiTags,
   ApiOperation,
   ApiBearerAuth,
   ApiResponse,
+  ApiProduces,
 } from '@nestjs/swagger';
 import { GenerateMonthlyConsumptionDto } from './dto/generate-monthly-consumption.dto';
-import { MonthlyConsumptionResponseDto } from './dto/monthly-consumption-response.dto';
 import { StatementsService } from './statements.service';
 import { StatementsQueryDto } from './dto/statements-query.dto';
 import { StatementResponseDto } from './dto/statement-response.dto';
@@ -37,19 +38,26 @@ export class StatementsController {
   @Post('monthly-consumption')
   @HttpCode(HttpStatus.OK)
   @Permissions({ action: 'read', resource: 'statements' })
-  @ApiOperation({ summary: 'Get monthly card consumptions from SAP using a cutoff date' })
+  @ApiOperation({ summary: 'Generate account statement PDF from SAP data using month/year and customerId' })
   @ApiBody({ type: GenerateMonthlyConsumptionDto })
+  @ApiProduces('application/pdf')
   @ApiResponse({
     status: 200,
-    description: 'Monthly consumption report data',
-    type: MonthlyConsumptionResponseDto,
+    description: 'PDF file download',
+    schema: { type: 'string', format: 'binary' },
   })
   @ApiResponse({ status: 400, description: 'Invalid request payload' })
-  @ApiResponse({ status: 404, description: 'Monthly consumption report not found' })
+  @ApiResponse({ status: 404, description: 'Account statement not found in SAP' })
   @ApiResponse({ status: 502, description: 'SAP RFC error' })
-  getMonthlyConsumption(
+  async getMonthlyConsumption(
     @Body() body: GenerateMonthlyConsumptionDto,
-  ): Promise<MonthlyConsumptionResponseDto> {
-    return this.statementsService.getMonthlyConsumption(body);
+    @Res() res: Response,
+  ): Promise<void> {
+    const pdf = await this.statementsService.getMonthlyConsumption(body);
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${pdf.fileName}"`);
+    res.setHeader('Content-Length', pdf.content.length.toString());
+    res.send(pdf.content);
   }
 }
