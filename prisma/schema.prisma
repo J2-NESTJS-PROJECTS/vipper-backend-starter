@@ -14,6 +14,20 @@ enum RoleType {
   API_CLIENT
 }
 
+enum PointRedemptionStatus {
+  PENDING
+  PROCESSED
+  REJECTED
+  FAILED
+}
+
+enum PointRefundStatus {
+  PENDING
+  PROCESSED
+  REJECTED
+  FAILED
+}
+
 model Role {
   id          String       @id @default(uuid())
   name        RoleType     @unique
@@ -52,42 +66,127 @@ model RolePermission {
 }
 
 model User {
-  id            String         @id @default(uuid())
-  email         String         @unique
-  username      String         @unique
-  password      String
-  firstName     String?
-  lastName      String?
-  isActive      Boolean        @default(true)
-  roleId        String
-  role          Role           @relation(fields: [roleId], references: [id])
-  refreshTokens RefreshToken[]
-  apiCredentials ApiCredential[]
-  auditLogs     AuditLog[]
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  lastLoginAt   DateTime?
+  id               String            @id @default(uuid())
+  email            String            @unique
+  username         String            @unique
+  password         String
+  firstName        String?
+  lastName         String?
+  isActive         Boolean           @default(true)
+  roleId           String
+  role             Role              @relation(fields: [roleId], references: [id])
+  refreshTokens    RefreshToken[]
+  apiCredentials   ApiCredential[]
+  pointRedemptions PointRedemption[] @relation("PointRedemptionRequestedByUser")
+  pointRefunds     PointRefund[]     @relation("PointRefundRequestedByUser")
+  auditLogs        AuditLog[]
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  lastLoginAt      DateTime?
 
   @@map("users")
 }
 
 model ApiCredential {
-  id        String   @id @default(uuid())
-  name      String?
-  keyHash   String   @unique
-  tokenHash String
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  isActive  Boolean  @default(true)
-  expiresAt DateTime?
+  id         String   @id @default(uuid())
+  name       String?
+  keyHash    String   @unique
+  tokenHash  String
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  isActive   Boolean  @default(true)
+  expiresAt  DateTime?
   lastUsedAt DateTime?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   @@index([userId])
   @@index([isActive])
   @@index([expiresAt])
   @@map("api_credentials")
+}
+
+model PointRedemption {
+  id                 String                @id @default(uuid())
+  orderId            String
+  channel            String                @default("ECOMMERCE")
+  storeCode          String?
+  documentNumber     String
+  cardNumber         String
+  customerName       String?
+  purchaseAmount     Decimal               @db.Decimal(15, 2)
+  pointsUsed         Decimal               @db.Decimal(15, 3)
+  currency           String                @default("USD")
+  transactionAt      DateTime
+  notes              String?
+  status             PointRedemptionStatus @default(PENDING)
+  sapReference       String?
+  sapMessage         String?
+  remainingPoints    Decimal?              @db.Decimal(15, 3)
+  requestPayload     Json
+  sapRequestPayload  Json?
+  sapResponsePayload Json?
+  errorMessage       String?
+  requestedByUserId  String?
+  requestedByUser    User?                 @relation("PointRedemptionRequestedByUser", fields: [requestedByUserId], references: [id], onDelete: SetNull)
+  refunds            PointRefund[]
+  processedAt        DateTime?
+  rejectedAt         DateTime?
+  failedAt           DateTime?
+  createdAt          DateTime              @default(now())
+  updatedAt          DateTime              @updatedAt
+
+  @@unique([channel, orderId])
+  @@index([status])
+  @@index([transactionAt])
+  @@index([documentNumber])
+  @@index([cardNumber])
+  @@index([requestedByUserId])
+  @@map("point_redemptions")
+}
+
+model PointRefund {
+  id                 String            @id @default(uuid())
+  refundId           String
+  channel            String            @default("ECOMMERCE")
+  originalOrderId    String
+  storeCode          String?
+  pointRedemptionId  String
+  pointRedemption    PointRedemption   @relation(fields: [pointRedemptionId], references: [id], onDelete: Restrict)
+  documentNumber     String
+  cardNumber         String
+  customerName       String?
+  refundAmount       Decimal           @db.Decimal(15, 2)
+  pointsRefunded     Decimal           @db.Decimal(15, 3)
+  currency           String            @default("USD")
+  transactionAt      DateTime
+  reason             String?
+  notes              String?
+  status             PointRefundStatus @default(PENDING)
+  sapReference       String?
+  sapMessage         String?
+  remainingPoints    Decimal?          @db.Decimal(15, 3)
+  requestPayload     Json
+  sapRequestPayload  Json?
+  sapResponsePayload Json?
+  errorMessage       String?
+  requestedByUserId  String?
+  requestedByUser    User?             @relation("PointRefundRequestedByUser", fields: [requestedByUserId], references: [id], onDelete: SetNull)
+  processedAt        DateTime?
+  rejectedAt         DateTime?
+  failedAt           DateTime?
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+
+  @@unique([channel, refundId])
+  @@index([originalOrderId])
+  @@index([pointRedemptionId])
+  @@index([status])
+  @@index([transactionAt])
+  @@index([documentNumber])
+  @@index([cardNumber])
+  @@index([requestedByUserId])
+  @@map("point_refunds")
 }
 
 model RefreshToken {

@@ -92,6 +92,8 @@ async function bootstrap() {
     .addTag('auth', 'Authentication endpoints')
     .addTag('customers', 'Customer management')
     .addTag('cards', 'Card management')
+    .addTag('points-refund', 'Points refund operations')
+    .addTag('points-redeem', 'Points redemption operations')
     .addTag('transactions', 'Transaction queries')
     .addTag('statements', 'Account statements')
     .build();

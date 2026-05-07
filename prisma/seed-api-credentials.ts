@@ -76,11 +76,22 @@ async function main() {
   console.log(`expiresAt=${credential.expiresAt?.toISOString() ?? 'never'}`);
 }
 
-main()
-  .catch((error) => {
-    console.error(error);
-    process.exit(1);
-  })
-  .finally(async () => {
-    await prisma.$disconnect();
-  });
+//main()
+//  .catch((error) => {
+//    console.error(error);
+//    process.exit(1);
+//  })
+//  .finally(async () => {
+//    await prisma.$disconnect();
+//  });
+
+(async () => {
+  try {
+    await main()
+  } catch (error) {
+    console.log(error)
+    process.exit(1)
+  } finally {
+    await prisma.$disconnect()
+  }
+})()

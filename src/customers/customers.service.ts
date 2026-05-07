@@ -1,6 +1,8 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { SapService } from '../sap/sap.service';
+import { SapCustomerResponseDto } from '../sap/dto/sap-customer-response.dto';
 import { CustomerResponseDto } from './dto/customer-response.dto';
+import { CustomerPointsResponseDto } from './dto/customer-points-response.dto';
 import { CardResponseDto } from '../cards/dto/card-response.dto';
 
 @Injectable()
@@ -11,13 +13,21 @@ export class CustomersService {
 
   async findById(customerId: string): Promise<CustomerResponseDto> {
     this.logger.debug(`Fetching customer ${customerId} from SAP`);
-    const sapData = await this.sapService.getCustomerById(customerId);
-
-    if (!sapData || !sapData.id) {
-      throw new NotFoundException(`Customer ${customerId} not found in SAP`);
-    }
-
+    const sapData = await this.getCustomerOrThrow(customerId);
     return this.mapToResponseDto(sapData);
+  }
+
+  async findPointsById(customerId: string): Promise<CustomerPointsResponseDto> {
+    this.logger.debug(`Fetching customer points for ${customerId} from SAP`);
+    const sapData = await this.getCustomerOrThrow(customerId);
+
+    return {
+      customerId: sapData.id,
+      documentNumber: sapData.documentNumber,
+      fullName: sapData.fullName,
+      cardNumber: sapData.cardNumber,
+      points: sapData.points ?? 0,
+    };
   }
 
   async findCustomerCards(customerId: string): Promise<CardResponseDto[]> {
@@ -58,5 +68,15 @@ export class CustomersService {
       cardNumber: sapData.cardNumber,
       points: sapData.points,
     };
+  }
+
+  private async getCustomerOrThrow(customerId: string): Promise<SapCustomerResponseDto> {
+    const sapData = await this.sapService.getCustomerById(customerId);
+
+    if (!sapData || !sapData.id) {
+      throw new NotFoundException(`Customer ${customerId} not found in SAP`);
+    }
+
+    return sapData;
   }
 }

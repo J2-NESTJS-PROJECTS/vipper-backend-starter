@@ -14,6 +14,8 @@ import { UsersModule } from './users/users.module';
 import { SapModule } from './sap/sap.module';
 import { CustomersModule } from './customers/customers.module';
 import { CardsModule } from './cards/cards.module';
+import { PointRefundsModule } from './point-refunds/point-refunds.module';
+import { PointRedemptionsModule } from './point-redemptions/point-redemptions.module';
 import { TransactionsModule } from './transactions/transactions.module';
 import { StatementsModule } from './statements/statements.module';
 
@@ -37,6 +39,8 @@ import { StatementsModule } from './statements/statements.module';
     SapModule,
     CustomersModule,
     CardsModule,
+    PointRefundsModule,
+    PointRedemptionsModule,
     TransactionsModule,
     StatementsModule,
   ],

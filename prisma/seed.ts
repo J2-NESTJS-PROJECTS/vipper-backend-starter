@@ -103,11 +103,22 @@ async function main() {
   console.log('Seed completed successfully');
 }
 
-main()
-  .catch((e) => {
-    console.error(e);
-    process.exit(1);
-  })
-  .finally(async () => {
-    await prisma.$disconnect();
-  });
+//main()
+//  .catch((e) => {
+//    console.error(e);
+//    process.exit(1);
+//  })
+//  .finally(async () => {
+//    await prisma.$disconnect();
+//  });
+
+(async () => {
+  try {
+    await main()
+  } catch (error) {
+    console.log(error)
+    process.exit(1)
+  } finally {
+    await prisma.$disconnect()
+  }
+})()
