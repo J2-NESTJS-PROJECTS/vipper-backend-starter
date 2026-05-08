@@ -1,45 +1,79 @@
-# Introduction 
-TODO: Give a short introduction of your project. Let this section explain the objectives or the motivation behind this project. 
+# NestJS RBAC Starter
 
-# Getting Started
-TODO: Guide users through getting your code up and running on their own system. In this section you can talk about:
-1.	Installation process
-2.	Software dependencies
-3.	Latest releases
-4.	API references
+Cascaron NestJS para nuevos proyectos backend con autenticacion JWT, RBAC, credenciales API para integraciones externas, auditoria, Prisma y PostgreSQL.
 
-# Build and Test
-TODO: Describe and show how to build your code and run the tests. 
+## Caracteristicas
 
-# Contribute
-TODO: Explain how other users and developers can contribute to make your code better. 
+- Auth JWT con access token y refresh token.
+- RBAC con roles, permisos y guards globales.
+- Autenticacion opcional por `x-api-key` y `x-api-token`.
+- Prisma Client con PostgreSQL.
+- Swagger bajo `/${API_PREFIX}/docs`.
+- Respuestas exitosas estandarizadas con `TransformInterceptor`.
+- Manejo centralizado de errores con `HttpExceptionFilter`.
+- Logging con Winston.
 
-If you want to learn more about creating good readme files then refer the following [guidelines](https://docs.microsoft.com/en-us/azure/devops/repos/git/create-a-readme?view=azure-devops). You can also seek inspiration from the below readme files:
-- [ASP.NET Core](https://github.com/aspnet/Home)
-- [Visual Studio Code](https://github.com/Microsoft/vscode)
-- [Chakra Core](https://github.com/Microsoft/ChakraCore)
+## Instalacion
 
+```bash
+npm install
+```
 
-Ejecutar seed 
+## Configuracion
 
-Cómo ejecutarlo con tu usuario unitystores
-Opción 1: generando key/token automáticamente
-SEED_API_CREDENTIAL_USER=unitystores npm run prisma:seed:api-credential
+```bash
+cp .env.example .env
+```
 
-Opción 2: definiendo tus propios valores
-SEED_API_CREDENTIAL_USER=unitystores SEED_API_CREDENTIAL_NAME=VTEX SEED_API_CREDENTIAL_KEY=mi_key_segura SEED_API_CREDENTIAL_TOKEN=mi_token_seguro npm run prisma:seed:api-credential
+Actualiza al menos:
 
-Opción 3: con expiración
-SEED_API_CREDENTIAL_USER=unitystores SEED_API_CREDENTIAL_NAME=VTEX SEED_API_CREDENTIAL_EXPIRES_AT=2026-12-31T23:59:59Znpm run prisma:seed:api-credential
+- `DATABASE_URL`
+- `JWT_ACCESS_SECRET`
+- `JWT_REFRESH_SECRET`
+- `CORS_ORIGINS`
 
+## Base De Datos
 
+```bash
+npm run prisma:generate
+npm run prisma:migrate
+npm run prisma:seed
+```
 
-npm install    
-npm run prisma:migrate:prod
-npm run prisma:generate    
-npm run build     
-sudo scp -r prisma administrador@172.16.0.22:/var/www/BackendOfficial/
-sudo scp -r dist administrador@172.16.0.22:/var/www/BackendOfficial/
+Usuario bootstrap:
 
+- Username: `admin`
+- Email: `admin@example.com`
+- Password: `Admin@123456`
 
+## Credenciales API
 
+Para habilitar autenticacion machine-to-machine:
+
+```env
+API_AUTH_ENABLED=true
+```
+
+Generar credenciales para un usuario existente:
+
+```bash
+SEED_API_CREDENTIAL_USER=admin npm run prisma:seed:api-credential
+```
+
+Tambien puedes definir tus propios valores:
+
+```bash
+SEED_API_CREDENTIAL_USER=admin SEED_API_CREDENTIAL_NAME="External Integration" SEED_API_CREDENTIAL_KEY="my_key" SEED_API_CREDENTIAL_TOKEN="my_token" npm run prisma:seed:api-credential
+```
+
+## Desarrollo
+
+```bash
+npm run start:dev
+```
+
+## Build
+
+```bash
+npm run build
+```

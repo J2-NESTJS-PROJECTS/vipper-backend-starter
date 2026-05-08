@@ -1,11 +1,11 @@
 # AGENTS.md
 
 ## Project Shape
-- Single NestJS app only. Main entrypoints are `src/main.ts` and `src/app.module.ts`.
-- `README.md` is placeholder text; trust code and config instead.
-- Postgres + Prisma store auth/RBAC state only: `users`, `roles`, `permissions`, `refresh_tokens`, `audit_logs`.
-- Business data does not come from Prisma. `customers`, `cards`, `transactions`, and `statements` are fetched from SAP RFC via `src/sap/sap.service.ts`.
-- Useful module boundaries: `auth` and `users` are local DB-backed; `customers`, `cards`, `transactions`, and `statements` are SAP-backed.
+- Single NestJS starter app. Main entrypoints are `src/main.ts` and `src/app.module.ts`.
+- This repository is a backend cascaron for new projects with JWT auth, RBAC, API credentials, audit logging, Prisma and PostgreSQL.
+- Auth/RBAC state lives in Postgres via Prisma: `users`, `roles`, `permissions`, `role_permissions`, `api_credentials`, `refresh_tokens`, and `audit_logs`.
+- Domain/business modules should be added as new feature modules under `src/` and imported from `src/app.module.ts`.
+- `Diagrama-ER.png` documents the current base schema. `Diagrama-ER-original.png` preserves the previous production ERD before this repo was converted into a starter.
 
 ## Run And Verify
 - Use `npm`; `package-lock.json` is the only lockfile.
@@ -24,18 +24,13 @@
 - Successful responses are wrapped as `{ statusCode, message, data, timestamp }` by `TransformInterceptor`.
 - Error responses come from `HttpExceptionFilter`, not Nest default error formatting.
 - Winston writes to `logs/error.log` and `logs/combined.log`; `logs/` is gitignored.
-- `THROTTLE_TTL`, `THROTTLE_LIMIT`, and `LOG_LEVEL` in `.env.example` are currently misleading: throttling and logger setup are hardcoded in code.
+- `THROTTLE_TTL`, `THROTTLE_LIMIT`, and `LOG_LEVEL` in `.env.example` are currently informational: throttling and logger setup are hardcoded in code.
 
 ## Auth And Authorization
-- Only `POST /auth/login` and `POST /auth/refresh` are public. Everything else requires Bearer JWT.
+- Only `POST /auth/login` and `POST /auth/refresh` are public. Everything else requires Bearer JWT or enabled API credentials.
 - Login DTO uses `username`, but the service accepts either username or email.
 - Seeded bootstrap admin is `admin` / `Admin@123456` (`admin@example.com`).
-- Seeded permission model matters for API testing: `SUPER_ADMIN` gets all seeded permissions, `ADMIN` gets read-only business permissions, and `USER` / `API_CLIENT` get no seeded business permissions.
-- `users` endpoints are role-guarded, not permission-guarded: `SUPER_ADMIN` and `ADMIN` can create/list/update/toggle users; only `SUPER_ADMIN` can delete.
-
-## SAP Integration
-- SAP-backed endpoints delegate through `SapRfcClientService`; business endpoint testing requires real SAP credentials plus valid SAP identifiers.
-- With only local Postgres working, focus verification on `auth` and `users`; SAP-backed endpoints will not be meaningfully testable.
-- Current RFC functions used by the app are `ZDATOS_TARJETA`, `ZGET_CUSTOMER_CARDS`, `ZGET_CARD_TRANSACTIONS`, `ZGET_CARD_STATEMENTS`, `ZGET_TRANSACTIONS`, and `ZGET_STATEMENTS`.
-- `customerId` handling is intentionally inconsistent in current code: customer lookup sends raw `CEDULA`, while card/transaction/statement calls left-pad customer IDs to 10 digits as `I_KUNNR`.
-- If SAP is unreachable, the app may still boot because SAP init failure is swallowed, but SAP-backed requests will fail later with `503` or `502`.
+- Seeded roles are `SUPER_ADMIN`, `ADMIN`, `USER`, and `API_CLIENT`.
+- `SUPER_ADMIN` receives all seeded permissions. `ADMIN` receives read-only seeded permissions.
+- `API_AUTH_ENABLED=true` enables `x-api-key` and `x-api-token` authentication for external integrations.
+- `prisma/seed-api-credentials.ts` creates hashed DB-backed API credentials for an existing user.

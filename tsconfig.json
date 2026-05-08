@@ -19,11 +19,6 @@
     "paths": {
       "@auth/*": ["./src/auth/*"],
       "@users/*": ["./src/users/*"],
-      "@sap/*": ["./src/sap/*"],
-      "@customers/*": ["./src/customers/*"],
-      "@cards/*": ["./src/cards/*"],
-      "@transactions/*": ["./src/transactions/*"],
-      "@statements/*": ["./src/statements/*"],
       "@common/*": ["./src/common/*"],
       "@config/*": ["./src/config/*"],
       "@prisma/*": ["./src/prisma/*"]

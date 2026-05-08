@@ -21,6 +21,8 @@ function parseOptionalDate(value?: string): Date | null {
 }
 
 async function main() {
+  console.log(process.env.SEED_API_CREDENTIAL_USER)
+  console.log({credentialKey:process.env.SEED_API_CREDENTIAL_KEY})
   const userIdentifier = process.env.SEED_API_CREDENTIAL_USER ?? process.env.API_AUTH_USER;
   if (!userIdentifier) {
     throw new Error(
@@ -47,7 +49,7 @@ async function main() {
 
   const keyHash = sha256(plainKey);
   const tokenHash = sha256(plainToken);
-
+  console.log({plainKey})
   const credential = await prisma.apiCredential.upsert({
     where: { keyHash },
     update: {

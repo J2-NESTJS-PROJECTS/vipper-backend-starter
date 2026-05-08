@@ -74,8 +74,8 @@ async function bootstrap() {
   );
 
   const swaggerConfig = new DocumentBuilder()
-    .setTitle('SAP Backend API')
-    .setDescription('NestJS Backend with SAP RFC Integration')
+    .setTitle('NestJS Base API')
+    .setDescription('NestJS starter with JWT authentication, RBAC, API credentials and audit logging')
     .setVersion('1.0')
     .addBearerAuth(
       { type: 'http', scheme: 'bearer', bearerFormat: 'JWT', in: 'header' },
@@ -90,12 +90,7 @@ async function bootstrap() {
       'x-api-token',
     )
     .addTag('auth', 'Authentication endpoints')
-    .addTag('customers', 'Customer management')
-    .addTag('cards', 'Card management')
-    .addTag('points-refund', 'Points refund operations')
-    .addTag('points-redeem', 'Points redemption operations')
-    .addTag('transactions', 'Transaction queries')
-    .addTag('statements', 'Account statements')
+    .addTag('users', 'User and RBAC management')
     .build();
 
   const document = SwaggerModule.createDocument(app, swaggerConfig);

@@ -29,24 +29,9 @@ async function main() {
 
   const permissions = await Promise.all([
     prisma.permission.upsert({
-      where: { action_resource: { action: 'read', resource: 'customers' } },
+      where: { action_resource: { action: 'read', resource: 'users' } },
       update: {},
-      create: { action: 'read', resource: 'customers', description: 'Read customer data' },
-    }),
-    prisma.permission.upsert({
-      where: { action_resource: { action: 'read', resource: 'cards' } },
-      update: {},
-      create: { action: 'read', resource: 'cards', description: 'Read card data' },
-    }),
-    prisma.permission.upsert({
-      where: { action_resource: { action: 'read', resource: 'transactions' } },
-      update: {},
-      create: { action: 'read', resource: 'transactions', description: 'Read transactions' },
-    }),
-    prisma.permission.upsert({
-      where: { action_resource: { action: 'read', resource: 'statements' } },
-      update: {},
-      create: { action: 'read', resource: 'statements', description: 'Read statements' },
+      create: { action: 'read', resource: 'users', description: 'Read user data' },
     }),
     prisma.permission.upsert({
       where: { action_resource: { action: 'manage', resource: 'users' } },
