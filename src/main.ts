@@ -66,8 +66,9 @@ async function bootstrap() {
       transformOptions: { enableImplicitConversion: true },
     }),
   );
-
+//! Para la trasnformacion y standarizacion de respuestas de error
   app.useGlobalFilters(new HttpExceptionFilter());
+//! Para la trasnformacion y standarizacion de respuestas validas
   app.useGlobalInterceptors(
     new LoggingInterceptor(),
     new TransformInterceptor(),
