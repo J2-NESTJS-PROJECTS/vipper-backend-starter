@@ -1,7 +1,7 @@
 {
-  "name": "nestjs-rbac-starter",
+  "name": "vipper-backend-starter",
   "version": "1.0.0",
-  "description": "NestJS starter with JWT auth, RBAC, API credentials and Prisma",
+  "description": "Vipper Backend Project starter with JWT auth, RBAC, API credentials and Prisma",
   "author": "",
   "private": true,
   "license": "UNLICENSED",
