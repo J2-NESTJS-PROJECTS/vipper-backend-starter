@@ -40,6 +40,16 @@ npm run prisma:migrate
 npm run prisma:seed
 ```
 
+## Alternativas de prisma migrate cuando no hay migraciones SQL versionadas
+```
+npx prisma migrate dev --name init
+```
+## Alternativas sin migraciones
+```
+npx prisma db push
+```
+
+
 Usuario bootstrap:
 
 - Username: `admin`
