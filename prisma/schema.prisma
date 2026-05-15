@@ -11,7 +11,72 @@ enum RoleType {
   SUPER_ADMIN
   ADMIN
   USER
+  CLIENT
+  BUSINESS_OWNER
+  DRIVER
   API_CLIENT
+}
+
+enum BusinessStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
+  CLOSED
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PREPARING
+  READY_FOR_PICKUP
+  ASSIGNED
+  PICKED_UP
+  ON_THE_WAY
+  DELIVERED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  AUTHORIZED
+  PAID
+  FAILED
+  CANCELLED
+  REFUNDED
+}
+
+enum PaymentProvider {
+  DATAFAST
+  CASH
+  MANUAL
+}
+
+enum PaymentMethod {
+  CASH
+  CARD
+  TRANSFER
+  WALLET
+}
+
+enum DriverStatus {
+  OFFLINE
+  AVAILABLE
+  BUSY
+  SUSPENDED
+}
+
+enum VehicleType {
+  BIKE
+  MOTORCYCLE
+  CAR
+  VAN
+  WALK
+}
+
+enum NotificationPlatform {
+  IOS
+  ANDROID
+  WEB
 }
 
 model Role {
@@ -52,22 +117,35 @@ model RolePermission {
 }
 
 model User {
-  id             String          @id @default(uuid())
-  email          String          @unique
-  username       String          @unique
-  password       String
-  firstName      String?
-  lastName       String?
-  isActive       Boolean         @default(true)
-  roleId         String
-  role           Role            @relation(fields: [roleId], references: [id])
-  refreshTokens  RefreshToken[]
-  apiCredentials ApiCredential[]
-  auditLogs      AuditLog[]
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
-  lastLoginAt    DateTime?
+  id                  String                @id @default(uuid())
+  email               String                @unique
+  username            String                @unique
+  password            String
+  firstName           String?
+  lastName            String?
+  phone               String?
+  isActive            Boolean               @default(true)
+  roleId              String
+  role                Role                  @relation(fields: [roleId], references: [id])
+  refreshTokens       RefreshToken[]
+  apiCredentials      ApiCredential[]
+  auditLogs           AuditLog[]
+  addresses           CustomerAddress[]
+  ownedBusinesses     Business[]            @relation("BusinessOwner")
+  orders              Order[]               @relation("CustomerOrders")
+  assignedOrders      Order[]               @relation("DriverOrders")
+  driverProfile       DriverProfile?
+  driverLocations     DriverLocation[]
+  orderStatusChanges  OrderStatusHistory[]
+  orderTrackingPoints OrderTrackingPoint[]
+  notificationTokens  NotificationToken[]
+  notifications       Notification[]
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+  lastLoginAt         DateTime?
 
+  @@index([roleId])
+  @@index([isActive])
   @@map("users")
 }
 
@@ -125,4 +203,373 @@ model AuditLog {
   @@index([resource])
   @@index([createdAt])
   @@map("audit_logs")
+}
+
+model CustomerAddress {
+  id           String   @id @default(uuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  label        String?
+  recipient    String?
+  phone        String?
+  street       String
+  reference    String?
+  city         String   @default("Quito")
+  province     String   @default("Pichincha")
+  country      String   @default("EC")
+  latitude     Decimal? @db.Decimal(10, 7)
+  longitude    Decimal? @db.Decimal(10, 7)
+  isDefault    Boolean  @default(false)
+  isActive     Boolean  @default(true)
+  orders       Order[]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([userId])
+  @@index([isActive])
+  @@map("customer_addresses")
+}
+
+model Vertical {
+  id          String     @id @default(uuid())
+  name        String     @unique
+  slug        String     @unique
+  description String?
+  iconUrl     String?
+  isActive    Boolean    @default(true)
+  sortOrder   Int        @default(0)
+  businesses  Business[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@index([isActive])
+  @@index([sortOrder])
+  @@map("verticals")
+}
+
+model Business {
+  id          String         @id @default(uuid())
+  ownerId     String
+  owner       User           @relation("BusinessOwner", fields: [ownerId], references: [id])
+  verticalId  String
+  vertical    Vertical       @relation(fields: [verticalId], references: [id])
+  name        String
+  slug        String         @unique
+  description String?
+  logoUrl     String?
+  coverUrl    String?
+  taxId       String?
+  phone       String?
+  email       String?
+  status      BusinessStatus @default(PENDING)
+  isActive    Boolean        @default(true)
+  branches    Branch[]
+  categories  Category[]
+  products    Product[]
+  orders      Order[]
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  @@index([ownerId])
+  @@index([verticalId])
+  @@index([status])
+  @@index([isActive])
+  @@map("businesses")
+}
+
+model Branch {
+  id             String    @id @default(uuid())
+  businessId     String
+  business       Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  name           String
+  slug           String
+  phone          String?
+  address        String
+  city           String    @default("Quito")
+  province       String    @default("Pichincha")
+  country        String    @default("EC")
+  latitude       Decimal?  @db.Decimal(10, 7)
+  longitude      Decimal?  @db.Decimal(10, 7)
+  opensAt        String?
+  closesAt       String?
+  isOpen         Boolean   @default(true)
+  isActive       Boolean   @default(true)
+  products       Product[]
+  orders         Order[]
+  driverProfiles DriverProfile[]
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@unique([businessId, slug])
+  @@index([businessId])
+  @@index([isOpen])
+  @@index([isActive])
+  @@map("branches")
+}
+
+model Category {
+  id          String    @id @default(uuid())
+  businessId  String
+  business    Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  name        String
+  slug        String
+  description String?
+  imageUrl    String?
+  isActive    Boolean   @default(true)
+  sortOrder   Int       @default(0)
+  products    Product[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([businessId, slug])
+  @@index([businessId])
+  @@index([isActive])
+  @@index([sortOrder])
+  @@map("categories")
+}
+
+model Product {
+  id          String      @id @default(uuid())
+  businessId  String
+  business    Business    @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  branchId    String?
+  branch      Branch?     @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  categoryId  String?
+  category    Category?   @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  name        String
+  slug        String
+  description String?
+  imageUrl    String?
+  price       Decimal     @db.Decimal(10, 2)
+  compareAtPrice Decimal? @db.Decimal(10, 2)
+  isAvailable Boolean     @default(true)
+  isActive    Boolean     @default(true)
+  sortOrder   Int         @default(0)
+  orderItems  OrderItem[]
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@unique([businessId, slug])
+  @@index([businessId])
+  @@index([branchId])
+  @@index([categoryId])
+  @@index([isAvailable])
+  @@index([isActive])
+  @@map("products")
+}
+
+model Order {
+  id                 String               @id @default(uuid())
+  code               String               @unique
+  customerId         String
+  customer           User                 @relation("CustomerOrders", fields: [customerId], references: [id])
+  businessId         String
+  business           Business             @relation(fields: [businessId], references: [id])
+  branchId           String
+  branch             Branch               @relation(fields: [branchId], references: [id])
+  driverId           String?
+  driver             User?                @relation("DriverOrders", fields: [driverId], references: [id], onDelete: SetNull)
+  addressId          String?
+  address            CustomerAddress?     @relation(fields: [addressId], references: [id], onDelete: SetNull)
+  status             OrderStatus          @default(PENDING)
+  subtotal           Decimal              @default(0) @db.Decimal(10, 2)
+  deliveryFee        Decimal              @default(0) @db.Decimal(10, 2)
+  serviceFee         Decimal              @default(0) @db.Decimal(10, 2)
+  discount           Decimal              @default(0) @db.Decimal(10, 2)
+  total              Decimal              @default(0) @db.Decimal(10, 2)
+  paymentMethod      PaymentMethod        @default(CASH)
+  notes              String?
+  deliveryLatitude   Decimal?             @db.Decimal(10, 7)
+  deliveryLongitude  Decimal?             @db.Decimal(10, 7)
+  requestedAt        DateTime             @default(now())
+  confirmedAt        DateTime?
+  deliveredAt        DateTime?
+  cancelledAt        DateTime?
+  items              OrderItem[]
+  statusHistory      OrderStatusHistory[]
+  trackingPoints     OrderTrackingPoint[]
+  payments           Payment[]
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+
+  @@index([customerId])
+  @@index([businessId])
+  @@index([branchId])
+  @@index([driverId])
+  @@index([addressId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("orders")
+}
+
+model OrderItem {
+  id          String   @id @default(uuid())
+  orderId     String
+  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId   String?
+  product     Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  name        String
+  description String?
+  quantity    Int
+  unitPrice   Decimal  @db.Decimal(10, 2)
+  totalPrice  Decimal  @db.Decimal(10, 2)
+  metadata    Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([orderId])
+  @@index([productId])
+  @@map("order_items")
+}
+
+model OrderStatusHistory {
+  id        String      @id @default(uuid())
+  orderId   String
+  order     Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  status    OrderStatus
+  changedById String?
+  changedBy User?       @relation(fields: [changedById], references: [id], onDelete: SetNull)
+  notes     String?
+  createdAt DateTime    @default(now())
+
+  @@index([orderId])
+  @@index([changedById])
+  @@index([status])
+  @@index([createdAt])
+  @@map("order_status_history")
+}
+
+model DriverProfile {
+  id              String       @id @default(uuid())
+  userId          String       @unique
+  user            User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  defaultBranchId String?
+  defaultBranch   Branch?      @relation(fields: [defaultBranchId], references: [id], onDelete: SetNull)
+  status          DriverStatus @default(OFFLINE)
+  vehicleType     VehicleType?
+  vehiclePlate    String?
+  licenseNumber   String?
+  isAvailable     Boolean      @default(false)
+  lastLatitude    Decimal?     @db.Decimal(10, 7)
+  lastLongitude   Decimal?     @db.Decimal(10, 7)
+  lastLocationAt  DateTime?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  @@index([defaultBranchId])
+  @@index([status])
+  @@index([isAvailable])
+  @@map("driver_profiles")
+}
+
+model DriverLocation {
+  id        String   @id @default(uuid())
+  driverId  String
+  driver    User     @relation(fields: [driverId], references: [id], onDelete: Cascade)
+  latitude  Decimal  @db.Decimal(10, 7)
+  longitude Decimal  @db.Decimal(10, 7)
+  heading   Decimal? @db.Decimal(6, 2)
+  speed     Decimal? @db.Decimal(6, 2)
+  accuracy  Decimal? @db.Decimal(8, 2)
+  createdAt DateTime @default(now())
+
+  @@index([driverId])
+  @@index([createdAt])
+  @@map("driver_locations")
+}
+
+model OrderTrackingPoint {
+  id        String   @id @default(uuid())
+  orderId   String
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  driverId  String?
+  driver    User?    @relation(fields: [driverId], references: [id], onDelete: SetNull)
+  latitude  Decimal  @db.Decimal(10, 7)
+  longitude Decimal  @db.Decimal(10, 7)
+  status    OrderStatus?
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  @@index([orderId])
+  @@index([driverId])
+  @@index([createdAt])
+  @@map("order_tracking_points")
+}
+
+model Payment {
+  id                    String           @id @default(uuid())
+  orderId               String
+  order                 Order            @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  provider              PaymentProvider  @default(DATAFAST)
+  method                PaymentMethod    @default(CARD)
+  status                PaymentStatus    @default(PENDING)
+  amount                Decimal          @db.Decimal(10, 2)
+  currency              String           @default("USD")
+  providerTransactionId String?
+  checkoutId            String?
+  requestPayload        Json?
+  responsePayload       Json?
+  paidAt                DateTime?
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
+  webhookEvents         PaymentWebhookEvent[]
+
+  @@index([orderId])
+  @@index([provider])
+  @@index([status])
+  @@index([providerTransactionId])
+  @@map("payments")
+}
+
+model PaymentWebhookEvent {
+  id             String          @id @default(uuid())
+  paymentId      String?
+  payment        Payment?        @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+  provider       PaymentProvider @default(DATAFAST)
+  eventType      String?
+  transactionId  String?
+  payload        Json
+  processedAt    DateTime?
+  processingError String?
+  createdAt      DateTime        @default(now())
+
+  @@index([paymentId])
+  @@index([provider])
+  @@index([transactionId])
+  @@index([createdAt])
+  @@map("payment_webhook_events")
+}
+
+model NotificationToken {
+  id         String               @id @default(uuid())
+  userId     String
+  user       User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token      String               @unique
+  platform   NotificationPlatform
+  deviceId   String?
+  isActive   Boolean              @default(true)
+  lastUsedAt DateTime?
+  createdAt  DateTime             @default(now())
+  updatedAt  DateTime             @updatedAt
+
+  @@index([userId])
+  @@index([platform])
+  @@index([isActive])
+  @@map("notification_tokens")
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  body      String
+  data      Json?
+  readAt    DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([readAt])
+  @@index([createdAt])
+  @@map("notifications")
 }

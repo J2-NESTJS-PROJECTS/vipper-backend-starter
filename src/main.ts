@@ -10,6 +10,7 @@ import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { NextFunction, Request, Response } from 'express';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { bufferLogs: true });
@@ -31,7 +32,7 @@ async function bootstrap() {
   app.use(compression());
   app.use(cookieParser());
 
-  app.use((req, res, next) => {
+  app.use((req:Request, res:Response, next:NextFunction) => {
     if (req.headers['access-control-request-private-network'] === 'true') {
       res.header('Access-Control-Allow-Private-Network', 'true');
     }
@@ -49,7 +50,13 @@ async function bootstrap() {
       callback(new Error(`CORS blocked origin: ${origin}`), false);
     },
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'X-Requested-With',
+      'x-api-key',
+      'x-api-token',
+    ],
     credentials: true,
     optionsSuccessStatus: 204,
   });
@@ -75,8 +82,8 @@ async function bootstrap() {
   );
 
   const swaggerConfig = new DocumentBuilder()
-    .setTitle('NestJS Base API')
-    .setDescription('NestJS starter with JWT authentication, RBAC, API credentials and audit logging')
+    .setTitle('Vipper Backend API')
+    .setDescription('Vipper MVP backend with JWT authentication, RBAC, API credentials, Prisma and delivery core modules')
     .setVersion('1.0')
     .addBearerAuth(
       { type: 'http', scheme: 'bearer', bearerFormat: 'JWT', in: 'header' },
@@ -92,6 +99,18 @@ async function bootstrap() {
     )
     .addTag('auth', 'Authentication endpoints')
     .addTag('users', 'User and RBAC management')
+    .addTag('profile', 'Current user profile')
+    .addTag('addresses', 'Customer delivery addresses')
+    .addTag('verticals', 'Delivery verticals')
+    .addTag('businesses', 'Business management and public listing')
+    .addTag('branches', 'Business branches')
+    .addTag('categories', 'Catalog categories')
+    .addTag('products', 'Catalog products')
+    .addTag('catalog', 'Public catalog search and home')
+    .addTag('orders', 'Order lifecycle')
+    .addTag('drivers', 'Driver profile, availability and location')
+    .addTag('payments', 'Payments and Datafast webhooks')
+    .addTag('notifications', 'FCM tokens and notifications')
     .build();
 
   const document = SwaggerModule.createDocument(app, swaggerConfig);

@@ -28,3 +28,4 @@ prisma/migrations/**/migration.sql
 # logs
 logs
 *.log
+PROMPT.md

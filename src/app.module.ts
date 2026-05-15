@@ -10,6 +10,18 @@ import { winstonConfig } from './config/winston.config';
 import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
+import { AddressesModule } from './addresses/addresses.module';
+import { BranchesModule } from './branches/branches.module';
+import { BusinessesModule } from './businesses/businesses.module';
+import { CatalogModule } from './catalog/catalog.module';
+import { CategoriesModule } from './categories/categories.module';
+import { DriversModule } from './drivers/drivers.module';
+import { NotificationsModule } from './notifications/notifications.module';
+import { OrdersModule } from './orders/orders.module';
+import { PaymentsModule } from './payments/payments.module';
+import { ProductsModule } from './products/products.module';
+import { ProfileModule } from './profile/profile.module';
+import { VerticalsModule } from './verticals/verticals.module';
 
 @Module({
   imports: [
@@ -28,6 +40,18 @@ import { UsersModule } from './users/users.module';
     PrismaModule,
     AuthModule,
     UsersModule,
+    ProfileModule,
+    AddressesModule,
+    VerticalsModule,
+    BusinessesModule,
+    BranchesModule,
+    CategoriesModule,
+    ProductsModule,
+    CatalogModule,
+    OrdersModule,
+    DriversModule,
+    PaymentsModule,
+    NotificationsModule,
   ],
   providers: [
     {
